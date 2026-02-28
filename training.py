@@ -10,7 +10,7 @@ torch.manual_seed(2026)
 device ='cuda'
 
 auto = True
-load = False
+load = True
 
 def main():
 
@@ -21,7 +21,7 @@ def main():
         v2.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5])
     ])
 
-    data = Dataset.CelebA(root='./data/', split='train', target_type='attr', download=False, transform=transform)
+    data = Dataset.CelebA(root='./data/', split='train', download=False, transform=transform)
 
     train_set = DataLoader(dataset=data, batch_size=16, shuffle=True, num_workers=10, pin_memory=True)
 
@@ -31,10 +31,10 @@ def main():
     print(next(generator.parameters()).device)
     discriminator = Discriminator().to(device)
 
-    optimizer_generator = torch.optim.Adam(generator.parameters(), lr=0.0001)
-    optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=0.00015)
+    optimizer_generator = torch.optim.Adam(generator.parameters(), lr=0.00005)
+    optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=0.00005)
 
-    checkpoint = 0
+    checkpoint = 39
 
     if load == True:
         generator.load_state_dict(torch.load(f"./versions/generator{checkpoint}.pt"))
@@ -48,18 +48,19 @@ def main():
         sum_pred_true=0.0
         sum_pred_synth=0.0
         batches=0
-        for x_true, _ in dataloader:
-            pred_true=discriminator(x_true.to(device))
+        for x_true, attr in dataloader:
+            attr = attr.to(device)
+            pred_true=discriminator(x_true.to(device), attr)
             z=torch.randn(x_true.shape[0], LATENT_SIZE).to(device)
-            x_synth=generator(z)
-            pred_synth=discriminator(x_synth)
+            x_synth=generator(z, attr)
+            pred_synth=discriminator(x_synth, attr)
 
             optimizer_discriminator.zero_grad()
             dloss=discriminator_loss(pred_synth, pred_true)
             dloss.backward(retain_graph=True)
             optimizer_discriminator.step()
 
-            pred_synth=discriminator(x_synth)
+            pred_synth=discriminator(x_synth, attr)
             optimizer_generator.zero_grad()
             gloss=generator_loss(pred_synth)
             gloss.backward()
