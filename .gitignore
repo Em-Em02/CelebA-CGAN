@@ -1,4 +1,6 @@
 data/
 __pycache__/
 /versions/*
-generate.py
+!/versions/generator39.pt
+!/versions/discriminator39.pt
+/.vscode/settings.json
